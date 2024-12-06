@@ -15,6 +15,8 @@ const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false,
   },
+  pool: true,
+  maxConnections: 5,
 });
 
 // const transporter = nodemailer.createTransport({
