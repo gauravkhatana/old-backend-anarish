@@ -1,40 +1,24 @@
 const nodemailer = require("nodemailer");
 const express = require("express");
-require("dotenv").config(); 
 const router = express.Router();
 
 // Configure nodemailer transporter
 const transporter = nodemailer.createTransport({
-  host: "anarish.com", // Replace with your SMTP host
-  port: 587,            // Port 587 is commonly used for sending emails with STARTTLS
-  secure: false,        // This should be false for port 587 (STARTTLS)
+  host: "anarish.com",
+  port: 587,
+  secure: false, // true for 465, false for other ports
   auth: {
-    user: process.env.EMAIL_USER,  // Set the email address in the .env file
-    pass: process.env.EMAIL_PASS,  // Set the password in the .env file
+    user: "mail@anarish.com",
+    pass: "Anarish@123",
   },
   tls: {
     rejectUnauthorized: false,
   },
-  pool: true,
-  maxConnections: 5,
+  pool: true, // Use connection pooling for better performance
+  maxConnections: 5, // Maximum number of concurrent connections
+  // connectionTimeout: 10000, // Increase timeout (in ms)
+  // greetingTimeout: 20000, // Increase greeting timeout (in ms)
 });
-
-// const transporter = nodemailer.createTransport({
-//   host: "anarish.com",
-//   port: 587,
-//   secure: false, // true for 465, false for other ports
-//   auth: {
-//     user: process.env.EMAIL_USER,
-//     pass: process.env.EMAIL_PASS,
-//   },
-//   tls: {
-//     rejectUnauthorized: false,
-//   },
-//   pool: true, // Use connection pooling for better performance
-//   maxConnections: 5, // Maximum number of concurrent connections
-//   // connectionTimeout: 10000, // Increase timeout (in ms)
-//   // greetingTimeout: 20000, // Increase greeting timeout (in ms)
-// });
 
 // Route to handle POST requests for sending emails
 router.post("/", async (req, res) => {
