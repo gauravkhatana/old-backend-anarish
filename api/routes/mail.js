@@ -89,14 +89,12 @@
 const nodemailer = require("nodemailer");
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
-const User = require("../../models/users");
 
-// Nodemailer transporter configuration
+// Configure nodemailer transporter
 const transporter = nodemailer.createTransport({
   host: "anarish.com",
   port: 587,
-  secure: false,
+  secure: false, // true for 465, false for other ports
   auth: {
     user: "mail@anarish.com",
     pass: "Anarish@123",
@@ -104,94 +102,63 @@ const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false,
   },
-  pool: true, // Enable connection pooling
-  maxConnections: 5, // Limit concurrent connections
+  pool: true, // Use connection pooling for better performance
+  maxConnections: 5, // Maximum number of concurrent connections
+  maxMessages: 100, // Maximum number of messages to send per connection
 });
 
-// Utility function to send emails
-const sendEmails = async (userData) => {
-  const mailOptions1 = {
-    from: {
-      name: "Anarish",
-      address: "mail@anarish.com",
-    },
-    to: userData.email,
-    subject: "Welcome to Anarish Innovation - We are excited to Connect!",
-    html: `
-      Hi ${userData.name}, <br/>
-      Welcome to Our Platform! We're thrilled to have the opportunity to work with you! <br/>
-      We have received your inquiry and one of our team members will get in touch with you soon.
-      <br/><br/>
-      Warm Regards,<br/> Team Anarish
-    `,
-  };
-
-  const mailOptions2 = {
-    from: {
-      name: "Anarish",
-      address: "mail@anarish.com",
-    },
-    to: "marketing@anarish.com",
-    cc: "charu.maheshwari@anarish.com",
-    subject: "New Query from Website",
-    html: `
-      A user has submitted a query on ${userData.date}: <br/><br/>
-      <b>Name:</b> ${userData.name}<br/>
-      <b>Email:</b> ${userData.email}<br/>
-      <b>Phone Number:</b> ${userData.phoneNumber}<br/>
-      <b>Interested In:</b> ${userData.intrests}<br/>
-      <b>Message:</b> ${userData.projectRequirements}<br/>
-    `,
-  };
-
-  return Promise.all([
-    transporter.sendMail(mailOptions1),
-    transporter.sendMail(mailOptions2),
-  ]);
-};
-
-// Route to handle user form submission
-router.post("/submitForm", async (req, res) => {
+// Route to handle POST requests for sending emails
+router.post("/", async (req, res) => {
   try {
-    const { name, email, phoneNumber, intrests, projectRequirements, date } =
-      req.body;
+    const { name, email, phoneNumber, interests, projectRequirements, date } = req.body;
 
-    // Basic validation
-    if (!name || !email || !phoneNumber || !intrests || !projectRequirements || !date) {
+    // Validate input data
+    if (!name || !email || !phoneNumber || !interests || !projectRequirements || !date) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    // Save user to database
-    const user = new User({
-      _id: new mongoose.Types.ObjectId(),
-      name,
-      email,
-      phoneNumber,
-      intrests,
-      projectRequirements,
-      date,
-    });
+    // Define email options
+    const mailOptions = [
+      {
+        from: { name: "Anarish", address: "mail@anarish.com" },
+        to: email,
+        subject: "Welcome to Anarish Innovation - We are excited to Connect!",
+        html: `
+          Hi ${name}, <br/>
+          Welcome to Our Platform! We're thrilled to have the opportunity to work with you! <br/>
+          We have received your inquiry and one of our team members will get in touch with you soon to discuss your needs in more detail.
+          <br/><br/>
+          Warm Regards,<br/> Team Anarish
+        `,
+      },
+      {
+        from: { name: "Anarish", address: "mail@anarish.com" },
+        to: "marketing@anarish.com",
+        cc: "charu.maheshwari@anarish.com",
+        subject: "New Query from Website",
+        html: `
+          Following user has tried to contact Anarish on ${date}: <br/><br/>
+          <p><b>Name:</b> ${name}</p>
+          <p><b>Email:</b> ${email}</p>
+          <p><b>Phone Number:</b> ${phoneNumber}</p>
+          <p><b>Interested In:</b> ${interests}</p>
+          <p><b>Message Shared:</b> ${projectRequirements}</p>
+        `,
+      },
+    ];
 
-    const savedUser = await user.save();
+    // Send all emails concurrently
+    const emailPromises = mailOptions.map((options) => transporter.sendMail(options));
+    await Promise.all(emailPromises);
 
-    // Respond to the client immediately
-    res.status(201).json({
-      message: "User info saved successfully. Emails are being processed.",
-      createdUser: savedUser,
-    });
-
-    // Send emails in the background
-    sendEmails(savedUser).catch((err) => {
-      console.error("Error sending emails:", err.message);
-    });
+    return res.status(200).json({ message: "Emails sent successfully." });
   } catch (error) {
-    console.error("Error saving user info:", error);
-    res.status(500).json({
-      error: "Failed to save user info. Please try again later.",
-      errorMessage: error.message,
+    console.error("Error sending emails:", error);
+    return res.status(500).json({
+      error: "Failed to send emails.",
+      details: error.message,
     });
   }
 });
 
 module.exports = router;
-
